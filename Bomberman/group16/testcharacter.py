@@ -8,6 +8,9 @@ from colorama import Fore, Back
 import heapq
 import math
 
+infinity = float('inf')
+max_depth = 5  # number of depth for expectimax search
+
 
 class TestCharacter(CharacterEntity):
 
@@ -31,7 +34,7 @@ class TestCharacter(CharacterEntity):
         elif a_star_move is None:
             state = "Stuck"
         else:
-            state = a_star_move[1]
+            state = a_star_move[1]  # can be "has path to exit" or "no path to exit"
 
         # Part 3
         if state == "Escape":
@@ -39,9 +42,13 @@ class TestCharacter(CharacterEntity):
             self.move(escape_x - c_position[0], escape_y - c_position[1])
         elif state == "Stuck":
             # we will be stuck and need bomb
+<<<<<<< HEAD
             if not self.any_explosion(wrld):
                 self.place_bomb()
             # will need to escape from bomb
+=======
+            self.place_bomb()  # will need to escape from bomb
+>>>>>>> 9809b95f81ac933f39bce9e6bcf4d4f51f9ad1af
         elif state == "has path to exit":
             # move the character by one step
             move_x = a_star_move[0][0] - c_position[0]
@@ -82,11 +89,19 @@ class TestCharacter(CharacterEntity):
 
     def threatens(self, node, wrld):
         # Go through neighboring cells
+<<<<<<< HEAD
         for dx in range(-3,4):
             # Avoid out-of-bounds access
             x = node[0] + dx
             if (x >= 0) and (x < wrld.width()):
                 for dy in range(-3,4):
+=======
+        for dx in range(-2, 3):
+            # Avoid out-of-bounds access
+            x = node[0] + dx
+            if (x >= 0) and (x < wrld.width()):
+                for dy in range(-2, 3):
+>>>>>>> 9809b95f81ac933f39bce9e6bcf4d4f51f9ad1af
                     y = node[1] + dy
                     # Avoid out-of-bounds access
                     if (y >= 0) and (y < wrld.height()):
@@ -94,7 +109,14 @@ class TestCharacter(CharacterEntity):
                         self.set_cell_color(x, y, Fore.GREEN + Back.GREEN)
                         if wrld.monsters_at(x, y) or wrld.bomb_at(x,y):
                             print("Threatened")
+<<<<<<< HEAD
                             (esc_x, esc_y) = max(self.empty_cell_neighbors(node, wrld), key= lambda n: self.heuristic(n,(x,y)))
+=======
+                            (esc_x, esc_y) = max(self.empty_cell_neighbors(node, wrld),
+                                                 key=lambda n: self.heuristic(n, (x, y)))
+                            print(
+                                sorted(self.empty_cell_neighbors(node, wrld), key=lambda n: self.heuristic(n, (x, y))))
+>>>>>>> 9809b95f81ac933f39bce9e6bcf4d4f51f9ad1af
 
                             print(esc_x, esc_y)
                             return (True, esc_x, esc_y)
@@ -158,6 +180,101 @@ class TestCharacter(CharacterEntity):
         # return a move that get close to the goal
 
         return None
+
+    # def value(s)
+    #   if s is a max node return maxValue(s)
+    #   if s is an exp node return expValue(s)
+    #   if s is a terminal node return evaluation(s)
+
+    # max pseudocode:
+    # def maxValue(s)
+    #     values = [value(s’) for s’ in successors(s)] return max(values)
+    def expectimax_c(self, wrld, events, depth):
+        # go through the event list to see if the wrld is terminated
+        # Event.tpe: the type of the event. It is one of Event.BOMB_HIT_WALL,
+        # Event.BOMB_HIT_MONSTER, Event.BOMB_HIT_CHARACTER,
+        # Event.CHARACTER_KILLED_BY_MONSTER, Event.CHARACTER_FOUND_EXIT.
+        for event in events:
+            if event.tpe == event.BOMB_HIT_CHARACTER or event.tpe == event.CHARACTER_KILLED_BY_MONSTER:
+                # character is dead so worst evaluation
+                return -infinity
+            elif event.tpe == event.CHARACTER_FOUND_EXIT:
+                # character is winning so best evaluation
+                return infinity
+            elif depth >= max_depth:
+                # reached searching depth, evaluate the wrld
+                # TODO: evaluation function used here, evaluation function can include events if needed
+                return self.evaluation(wrld)
+
+        v = -infinity
+        c = next(iter(wrld.characters().values()))  # get the character in the wrld
+
+        # Go through the possible 9-moves of the character
+        # Loop through delta x
+        for dx in [-1, 0, 1]:
+            # Avoid out-of-bound indexing
+            if (c.x + dx >= 0) and (c.x + dx < wrld.width()):
+                # Loop through delta y
+                for dy in [-1, 0, 1]:
+                    # Avoid out-of-bound indexing
+                    if (c.y + dy >= 0) and (c.y + dy < wrld.height()):
+                        # No need to check impossible moves
+                        if not wrld.wall_at(c.x + dx, c.y + dy):
+                            # Set move in wrld
+                            c.move(dx, dy)
+                            # Get new world
+                            (new_wrld, new_events) = wrld.next()
+                            # TODO: do something with newworld and events
+                            v = max(v, self.expectimax_m(new_wrld, new_events, depth + 1))
+        return v
+
+    # expect pseudocode:
+    # def expValue(s)
+    #     values = [value(s’) for s’ in successors(s)]
+    #     weights = [probability(s, s’) for s’ in successors(s)]
+    #     return expectation(values, weights)
+    # param: wlrd is a senseworld object which contains events
+    def expectimax_m(self, wrld, events, depth):
+        for event in events:
+            if event.tpe == event.BOMB_HIT_CHARACTER or event.tpe == event.CHARACTER_KILLED_BY_MONSTER:
+                # character is dead so worst evaluation
+                return -infinity
+            elif event.tpe == event.CHARACTER_FOUND_EXIT:
+                # character is winning so best evaluation
+                return infinity
+            elif depth >= max_depth:
+                # reached searching depth, evaluate the wrld
+                # TODO: evaluation function used here
+                return self.evaluation(wrld)
+
+        v = infinity
+        sum_v = 0
+        m = next(iter(wrld.monsters().values()))
+
+        # record all possible number of moves
+        n = 0
+
+        # Go through the possible 8-moves of the monster
+        # Loop through delta x
+        for dx in [-1, 0, 1]:
+            # Avoid out-of-bound indexing
+            if (m.x + dx >= 0) and (m.x + dx < wrld.width()):
+                # Loop through delta y
+                for dy in [-1, 0, 1]:
+                    # Make sure the monster is moving
+                    if (dx != 0) or (dy != 0):
+                        # Avoid out-of-bound indexing
+                        if (m.y + dy >= 0) and (m.y + dy < wrld.height()):
+                            # No need to check impossible moves
+                            if not wrld.wall_at(m.x + dx, m.y + dy):
+                                # Set move in wrld
+                                m.move(dx, dy)
+                                # Get new world
+                                (new_wrld, new_events) = wrld.next()
+                                # TODO: do something with newworld and events
+                                n += 1
+                                sum_v += self.expectimax_c(new_wrld, new_events, depth + 1)
+        return sum_v / n
 
 
 class PriorityQueue:
