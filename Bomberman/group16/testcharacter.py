@@ -21,17 +21,23 @@ class TestCharacter(CharacterEntity):
         # current position of character in a tuple: Where is the character?
         c_position = (self.x, self.y)
         a_star_move = self.a_star_search(c_position, wrld.exitcell, wrld)
+        (threaten, escape_x, escape_y) = self.threatens(c_position, wrld)
 
         # Part 2
         # finds the next position on the A star path to exit
         state = "Default"
-        if a_star_move is None:
+        if threaten:
+            state = "Escape"
+        elif a_star_move is None:
             state = "Stuck"
         else:
             state = a_star_move[1]
 
         # Part 3
-        if state == "Stuck":
+        if state == "Escape":
+            print("move to:", escape_x - c_position[0], escape_y - c_position[1])
+            self.move(escape_x - c_position[0], escape_y - c_position[1])
+        elif state == "Stuck":
             # we will be stuck and need bomb
             self.place_bomb()
             # will need to escape from bomb
@@ -44,7 +50,7 @@ class TestCharacter(CharacterEntity):
             move_x = a_star_move[0][0] - c_position[0]
             move_y = a_star_move[0][1] - c_position[1]
             self.move(move_x, move_y)
-        elif state == "default":
+        elif state == "Default":
             print("This should not happen!!!!!")
         pass
 
@@ -65,6 +71,28 @@ class TestCharacter(CharacterEntity):
                                 cells.append((node[0] + dx, node[1] + dy))
         # All done
         return cells
+
+    def threatens(self, node, wrld):
+        # Go through neighboring cells
+        for dx in range(-2,3):
+            # Avoid out-of-bounds access
+            x = node[0] + dx
+            if (x >= 0) and (x < wrld.width()):
+                for dy in range(-2,3):
+                    y = node[1] + dy
+                    # Avoid out-of-bounds access
+                    if (y >= 0) and (y < wrld.height()):
+                        # If the cell is not safe, rate it really low
+                        self.set_cell_color(x, y, Fore.GREEN + Back.GREEN)
+                        if wrld.monsters_at(x, y) or wrld.bomb_at(x, y):
+                            print("Threatened")
+                            (esc_x, esc_y) = max(self.empty_cell_neighbors(node, wrld), key= lambda n: self.heuristic(n,(x,y)))
+                            print(sorted(self.empty_cell_neighbors(node, wrld), key= lambda n: self.heuristic(n,(x,y))))
+
+                            print(esc_x, esc_y)
+                            return (True, esc_x, esc_y)
+        # All done
+        return (False, 0, 0)
 
     # heuristic from one location to another
     # node is just a tuple with (x, y)
