@@ -39,7 +39,8 @@ class TestCharacter(CharacterEntity):
             self.move(escape_x - c_position[0], escape_y - c_position[1])
         elif state == "Stuck":
             # we will be stuck and need bomb
-            self.place_bomb()
+            if not self.any_explosion(wrld):
+                self.place_bomb()
             # will need to escape from bomb
         elif state == "has path to exit":
             # move the character by one step
@@ -72,22 +73,28 @@ class TestCharacter(CharacterEntity):
         # All done
         return cells
 
+    def any_explosion(self, wrld):
+        for x in range(0, wrld.width()):
+            for y in range (0, wrld.height()):
+                if (wrld.explosion_at(x, y)):
+                    return True
+        return False
+
     def threatens(self, node, wrld):
         # Go through neighboring cells
-        for dx in range(-2,3):
+        for dx in range(-3,4):
             # Avoid out-of-bounds access
             x = node[0] + dx
             if (x >= 0) and (x < wrld.width()):
-                for dy in range(-2,3):
+                for dy in range(-3,4):
                     y = node[1] + dy
                     # Avoid out-of-bounds access
                     if (y >= 0) and (y < wrld.height()):
                         # If the cell is not safe, rate it really low
                         self.set_cell_color(x, y, Fore.GREEN + Back.GREEN)
-                        if wrld.monsters_at(x, y) or wrld.bomb_at(x, y):
+                        if wrld.monsters_at(x, y) or wrld.bomb_at(x,y):
                             print("Threatened")
                             (esc_x, esc_y) = max(self.empty_cell_neighbors(node, wrld), key= lambda n: self.heuristic(n,(x,y)))
-                            print(sorted(self.empty_cell_neighbors(node, wrld), key= lambda n: self.heuristic(n,(x,y))))
 
                             print(esc_x, esc_y)
                             return (True, esc_x, esc_y)
