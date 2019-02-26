@@ -42,13 +42,9 @@ class TestCharacter(CharacterEntity):
             self.move(escape_x - c_position[0], escape_y - c_position[1])
         elif state == "Stuck":
             # we will be stuck and need bomb
-<<<<<<< HEAD
             if not self.any_explosion(wrld):
                 self.place_bomb()
             # will need to escape from bomb
-=======
-            self.place_bomb()  # will need to escape from bomb
->>>>>>> 9809b95f81ac933f39bce9e6bcf4d4f51f9ad1af
         elif state == "has path to exit":
             # move the character by one step
             move_x = a_star_move[0][0] - c_position[0]
@@ -89,19 +85,11 @@ class TestCharacter(CharacterEntity):
 
     def threatens(self, node, wrld):
         # Go through neighboring cells
-<<<<<<< HEAD
-        for dx in range(-3,4):
-            # Avoid out-of-bounds access
-            x = node[0] + dx
-            if (x >= 0) and (x < wrld.width()):
-                for dy in range(-3,4):
-=======
         for dx in range(-2, 3):
             # Avoid out-of-bounds access
             x = node[0] + dx
             if (x >= 0) and (x < wrld.width()):
                 for dy in range(-2, 3):
->>>>>>> 9809b95f81ac933f39bce9e6bcf4d4f51f9ad1af
                     y = node[1] + dy
                     # Avoid out-of-bounds access
                     if (y >= 0) and (y < wrld.height()):
@@ -109,14 +97,10 @@ class TestCharacter(CharacterEntity):
                         self.set_cell_color(x, y, Fore.GREEN + Back.GREEN)
                         if wrld.monsters_at(x, y) or wrld.bomb_at(x,y):
                             print("Threatened")
-<<<<<<< HEAD
-                            (esc_x, esc_y) = max(self.empty_cell_neighbors(node, wrld), key= lambda n: self.heuristic(n,(x,y)))
-=======
                             (esc_x, esc_y) = max(self.empty_cell_neighbors(node, wrld),
                                                  key=lambda n: self.heuristic(n, (x, y)))
                             print(
                                 sorted(self.empty_cell_neighbors(node, wrld), key=lambda n: self.heuristic(n, (x, y))))
->>>>>>> 9809b95f81ac933f39bce9e6bcf4d4f51f9ad1af
 
                             print(esc_x, esc_y)
                             return (True, esc_x, esc_y)
