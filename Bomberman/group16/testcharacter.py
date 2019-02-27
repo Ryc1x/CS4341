@@ -9,7 +9,7 @@ import heapq
 import math
 
 infinity = float('inf')
-max_depth = 3 # number of depth for expectimax search
+max_depth = 3  # number of depth for expectimax search
 
 
 class TestCharacter(CharacterEntity):
@@ -24,40 +24,56 @@ class TestCharacter(CharacterEntity):
         # current position of character in a tuple: Where is the character?
         c_position = (self.x, self.y)
         a_star_move = self.a_star_search(c_position, wrld.exitcell, wrld)
-        (threaten, escape_x, escape_y) = self.threatens(c_position, wrld)
-        self.bestmove = a_star_move[0]
+
+        (threaten, escape_x, escape_y) = self.threatens(c_position, wrld) # currently not using threaten function
+
+        # if a_star_move returns none, there is no way to go closer to exit
+        if a_star_move is not None:
+            self.bestmove = a_star_move[0]
         print(self.bestmove)
 
         # Part 2
         # finds the next position on the A star path to exit
         state = "Default"
-        if threaten:
-            state = "Escape"
+
+        # modified threaten to be bomb thread and monster thread
+        # TODO: Escape bomb when bomb thread
+        # expectimax when monster threaten
+        if self.monster_threaten(wrld, 3)[0] and self.bomb_threaten(wrld):
+            state = "Monster and bomb"
+        elif self.monster_threaten(wrld, 3)[0]:
+            state = "Monster"
+        elif self.bomb_threaten(wrld):
+            state = "Bomb"
         elif a_star_move is None:
             state = "Stuck"
         else:
             state = a_star_move[1]  # can be "has path to exit" or "no path to exit"
 
         # Part 3
-        if state == "Stuck":
-            if not self.any_explosion(wrld):
-                self.place_bomb()
-        (dx,dy) = self.expectimax_action(wrld, 0)
-        self.move(dx,dy)
-        return
+        # if state == "Stuck":
+        #     if not self.any_explosion(wrld):
+        #         self.place_bomb()
+
+        # (dx, dy) = self.expectimax_action(wrld, 0)
+        # self.move(dx, dy)
+        # return
 
         # NOT USED BELOW
 
-        if state == "Escape":
-            print("move to:", escape_x - c_position[0], escape_y - c_position[1])
-            self.move(escape_x - c_position[0], escape_y - c_position[1])
+        if state == "Monster and bomb":
+            print("Monster and bomb near me!!!!!!!!!!!!")
+            self.move(0, 0)
+        elif state == "Monster":
+            print("Monster !!!!!!!!!!!!!!")
+            self.expectimax_action(wrld, 0)
+        elif state == "Bomb":
+            print("Bomb!!!!!!!!!!!!!!!!!!!!")
+            self.move(0, 0)
         elif state == "Stuck":
             # we will be stuck and need bomb
-
             if not self.any_explosion(wrld):
-                self.place_bomb()
-            # will need to escape from bomb
-
+                self.place_bomb()  # will need to escape from bomb
         elif state == "has path to exit":
             # move the character by one step
             move_x = a_star_move[0][0] - c_position[0]
@@ -99,11 +115,11 @@ class TestCharacter(CharacterEntity):
     def threatens(self, node, wrld):
         # Go through neighboring cells
 
-        for dx in range(-3,4):
+        for dx in range(-3, 4):
             # Avoid out-of-bounds access
             x = node[0] + dx
             if (x >= 0) and (x < wrld.width()):
-                for dy in range(-3,4):
+                for dy in range(-3, 4):
                     y = node[1] + dy
                     # Avoid out-of-bounds access
                     if (y >= 0) and (y < wrld.height()):
@@ -111,7 +127,8 @@ class TestCharacter(CharacterEntity):
                         # self.set_cell_color(x, y, Fore.GREEN + Back.GREEN)
                         if wrld.monsters_at(x, y) or wrld.bomb_at(x, y):
                             print("Threatened")
-                            (esc_x, esc_y) = max(self.empty_cell_neighbors(node, wrld), key= lambda n: self.heuristic(n,(x,y)))
+                            (esc_x, esc_y) = max(self.empty_cell_neighbors(node, wrld),
+                                                 key=lambda n: self.heuristic(n, (x, y)))
 
                             print(esc_x, esc_y)
                             return (True, esc_x, esc_y)
@@ -125,36 +142,39 @@ class TestCharacter(CharacterEntity):
     # returned array is contains tuple (x, y)
     def monster_threaten(self, wrld, size):
         c = next(iter(wrld.characters.values()))
+        c = c[0]
         x = c.x
         y = c.y
+        print("In this world character is at ", x, ", ", y)
         monster_list = []
         # Go through neighboring cells
 
-        for dx in range(-size, size):
+        for dx in range(-size, size + 1):
             # Avoid out-of-bounds access
             if (x + dx >= 0) and (x + dx < wrld.width()):
-                for dy in range(-3, 4):
+                for dy in range(-size, size + 1):
                     # Avoid out-of-bounds access
                     if (y + dy >= 0) and (y + dy < wrld.height()):
-                        if wrld.monsters_at(x, y):
+                        if wrld.monsters_at(x + dx, y + dy):
                             monster_list.append((x + dx, y + dy))
-
+        print(" Monster is at: ", monster_list)
         if len(monster_list) > 0:
-            return (True, monster_list)
+            return True, monster_list
         else:
-            return (False, monster_list)
+            return False, monster_list
 
     # Checking bomb in straight line
     def bomb_threaten(self, wrld):
         c = next(iter(wrld.characters.values()))
+        c = c[0]
         x = c.x
         y = c.y
-        for dx in range(-5, 5):
+        for dx in range(-5, 6):
             # Avoid out-of-bounds access
             if (x + dx >= 0) and (x + dx < wrld.width()):
                 if wrld.bomb_at(x + dx, y):
                     return True
-        for dy in range(-5, 5):
+        for dy in range(-5, 6):
             # Avoid out-of-bounds access
             if (y + dy >= 0) and (y + dy < wrld.height()):
                 if wrld.bomb_at(x, y + dy):
@@ -167,7 +187,6 @@ class TestCharacter(CharacterEntity):
             return True
         else:
             return False
-
 
     # heuristic from one location to another
     # node is just a tuple with (x, y)
@@ -232,7 +251,7 @@ class TestCharacter(CharacterEntity):
         # Event.tpe: the type of the event. It is one of Event.BOMB_HIT_WALL,
         # Event.BOMB_HIT_MONSTER, Event.BOMB_HIT_CHARACTER,
         # Event.CHARACTER_KILLED_BY_MONSTER, Event.CHARACTER_FOUND_EXIT.
-        action = (0,0)
+        action = (0, 0)
         max_v = -infinity
 
         c = next(iter(wrld.characters.values()))  # get the character position in the wrld
@@ -277,8 +296,8 @@ class TestCharacter(CharacterEntity):
                                                     # do something with new world and events
                                                     n += 1  # number of options for monster movements
                                                     sum_v += self.expectimax(new_wrld, new_events, depth + 1)
-                            dist_to_best = self.heuristic((c.x+dx_c, c.y+dy_c), self.bestmove)
-                            expect = sum_v / n - dist_to_best
+                            dist_to_best = self.heuristic((c.x + dx_c, c.y + dy_c), self.bestmove)
+                            expect = sum_v / n - dist_to_best  # TODO: adding a weight to the dist_to_best
                             if expect > max_v:
                                 action = (dx_c, dy_c)
                                 max_v = expect
@@ -304,9 +323,9 @@ class TestCharacter(CharacterEntity):
 
         expect_values = []
         c = next(iter(wrld.characters.values()))  # get the character position in the wrld
-        c = c[0]
+        c = c[0]  # c was a list
         m = next(iter(wrld.monsters.values()))  # get the monster position in the wrld
-        m = m[0]
+        m = m[0]  # m was a list
 
         # Go through the possible 9-moves of the character
         # Loop through delta x
@@ -356,10 +375,9 @@ class TestCharacter(CharacterEntity):
     def evaluation(self, wrld):
         c = next(iter(wrld.characters.values()))
         c = c[0]
-        
-        # return self.evaluation_bomb(wrld, c) + self.evaluation_monster_hard(wrld, c) \
-        #        + self.evaluation_explosion(wrld, c) + self.evaluation_straight_distance(wrld, c)
-        return 0
+
+        return self.evaluation_bomb(wrld, c) + self.evaluation_monster_easy(wrld, c) #+ self.evaluation_explosion(wrld, c)
+        + self.evaluation_straight_distance(wrld, c)
 
     # param: wrld, c
     # def:
@@ -373,14 +391,14 @@ class TestCharacter(CharacterEntity):
         bomb_score = 0
 
         # Check Vertical Position
-        for dy in (-5, 5):
+        for dy in (-5, 6):
             # Avoid out-of-bound indexing
             if (y + dy >= 0) and (y + dy < wrld.height()):
                 if wrld.bomb_at(x, y + dy):
                     bomb_score -= 100
 
         # Check Horizontal Position
-        for dx in (-5, 5):
+        for dx in (-5, 6):
             # Avoid out-of-bound indexing
             if (x + dx >= 0) and (x + dx < wrld.width()):
                 if wrld.bomb_at(x + dx, y):
@@ -436,7 +454,7 @@ class TestCharacter(CharacterEntity):
                                         # 0 w 0
                                         # 0 0 c
                                         # 3 moves till death
-                                        if wrld.wall_at(x + int (dx / 2), y + int (dy / 2)):
+                                        if wrld.wall_at(x + int(dx / 2), y + int(dy / 2)):
 
                                             # m w 0
                                             # 0 w 0
@@ -446,10 +464,10 @@ class TestCharacter(CharacterEntity):
                                             # w w w
                                             # 0 0 c
                                             # 4 moves till death
-                                            if ((wrld.wall_at(x + int (dx / 2), c.y) and
-                                                 wrld.wall_at(x + int (dx / 2), y + dy)) or
-                                                    (wrld.wall_at(x, y + int (dy / 2) and
-                                                        wrld.wall_at(x + dx, y + int (dy / 2))))):
+                                            if ((wrld.wall_at(x + int(dx / 2), c.y) and wrld.wall_at(x + int(dx / 2),
+                                                                                                     y + dy)) or (
+                                                    wrld.wall_at(x, y + int(dy / 2) and wrld.wall_at(x + dx, y + int(
+                                                        dy / 2))))):
                                                 m_score_1 -= 100
                                             else:
                                                 m_score_1 -= 100
@@ -477,17 +495,16 @@ class TestCharacter(CharacterEntity):
                                         if abs(dx) == 2:
                                             # check boundary
                                             if y + 1 <= wrld.height() and y - 1 >= 0:
-                                                if wrld.wall_at(x + int (dx / 2), y + 1) and \
-                                                        wrld.wall_at(x + int (dx / 2), y) and \
-                                                        wrld.wall_at(x + int (dx / 2), y - 1):
+                                                if wrld.wall_at(x + int(dx / 2), y + 1) and wrld.wall_at(
+                                                        x + int(dx / 2), y) and wrld.wall_at(x + int(dx / 2), y - 1):
                                                     m_score_2 -= 100
                                             elif y + 1 > wrld.height():
-                                                if wrld.wall_at(x + int (dx / 2), y) and \
-                                                        wrld.wall_at(x + int (dx / 2), y - 1):
+                                                if wrld.wall_at(x + int(dx / 2), y) and wrld.wall_at(x + int(dx / 2),
+                                                                                                     y - 1):
                                                     m_score_2 -= 100
                                             else:
-                                                if wrld.wall_at(x + int (dx / 2), y + 1) and \
-                                                        wrld.wall_at(x + int (dx / 2), y):
+                                                if wrld.wall_at(x + int(dx / 2), y + 1) and wrld.wall_at(
+                                                        x + int(dx / 2), y):
                                                     m_score_2 -= 100
 
                                         # 0 m 0
@@ -497,17 +514,16 @@ class TestCharacter(CharacterEntity):
                                         elif abs(dy) == 2:
                                             # check boundary
                                             if x + 1 <= wrld.width() and x - 1 >= 0:
-                                                if wrld.wall_at(x - 1, y + int (dy / 2)) and \
-                                                        wrld.wall_at(x, y + int (dy / 2)) and \
-                                                        wrld.wall_at(x + 1, int (dy / 2)):
+                                                if wrld.wall_at(x - 1, y + int(dy / 2)) and wrld.wall_at(x, y + int(
+                                                        dy / 2)) and wrld.wall_at(x + 1, int(dy / 2)):
                                                     m_score_2 -= 100
                                             elif x + 1 > wrld.width():
-                                                if wrld.wall_at(x - 1, y + int (dy / 2)) and \
-                                                        wrld.wall_at(x, y + int (dy / 2)):
+                                                if wrld.wall_at(x - 1, y + int(dy / 2)) and wrld.wall_at(x, y + int(
+                                                        dy / 2)):
                                                     m_score_2 -= 100
                                             else:
-                                                if wrld.wall_at(x, y + int (dy / 2)) and \
-                                                        wrld.wall_at(x + 1, int (dy / 2)):
+                                                if wrld.wall_at(x, y + int(dy / 2)) and wrld.wall_at(x + 1,
+                                                                                                     int(dy / 2)):
                                                     m_score_2 -= 100
 
                                         if m_score_2 == 0:
@@ -526,16 +542,15 @@ class TestCharacter(CharacterEntity):
                                         # 0 w c
                                         # 3 moves till death
                                         if abs(dx) == 2:
-                                            if wrld.wall_at(x + int (dx / 2), y) and \
-                                                    wrld.wall_at(x + int (dx / 2), y + dy):
+                                            if wrld.wall_at(x + int(dx / 2), y) and wrld.wall_at(x + int(dx / 2),
+                                                                                                 y + dy):
                                                 monster_score -= 200
 
                                         # m 0
                                         # w w
                                         # 0 c
                                         elif abs(dy) == 2:
-                                            if wrld.wall_at(x, y + int (dy / 2)) and \
-                                                    wrld.wall_at(x + dx, int (dy / 2)):
+                                            if wrld.wall_at(x, y + int(dy / 2)) and wrld.wall_at(x + dx, int(dy / 2)):
                                                 monster_score -= 200
 
                                     if m_score_3 == 0:
@@ -584,7 +599,7 @@ class TestCharacter(CharacterEntity):
         x = c.x
         y = c.y
         score = 0
-        distance = self.heuristic((x,y), wrld.exitcell)
+        distance = self.heuristic((x, y), wrld.exitcell)
 
         # closer character with the exit cell, higher the score
         if distance > 10:
@@ -592,6 +607,7 @@ class TestCharacter(CharacterEntity):
         else:
             score += (10 - distance) * 20
         return score
+
 
 class PriorityQueue:
     def __init__(self):
