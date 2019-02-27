@@ -9,7 +9,7 @@ import heapq
 import math
 
 infinity = float('inf')
-max_depth = 5  # number of depth for expectimax search
+max_depth = 3 # number of depth for expectimax search
 
 
 class TestCharacter(CharacterEntity):
@@ -25,6 +25,8 @@ class TestCharacter(CharacterEntity):
         c_position = (self.x, self.y)
         a_star_move = self.a_star_search(c_position, wrld.exitcell, wrld)
         (threaten, escape_x, escape_y) = self.threatens(c_position, wrld)
+        self.bestmove = a_star_move[0]
+        print(self.bestmove)
 
         # Part 2
         # finds the next position on the A star path to exit
@@ -37,6 +39,15 @@ class TestCharacter(CharacterEntity):
             state = a_star_move[1]  # can be "has path to exit" or "no path to exit"
 
         # Part 3
+        if state == "Stuck":
+            if not self.any_explosion(wrld):
+                self.place_bomb()
+        (dx,dy) = self.expectimax_action(wrld, 0)
+        self.move(dx,dy)
+        return
+
+        # NOT USED BELOW
+
         if state == "Escape":
             print("move to:", escape_x - c_position[0], escape_y - c_position[1])
             self.move(escape_x - c_position[0], escape_y - c_position[1])
@@ -97,7 +108,7 @@ class TestCharacter(CharacterEntity):
                     # Avoid out-of-bounds access
                     if (y >= 0) and (y < wrld.height()):
                         # If the cell is not safe, rate it really low
-                        self.set_cell_color(x, y, Fore.GREEN + Back.GREEN)
+                        # self.set_cell_color(x, y, Fore.GREEN + Back.GREEN)
                         if wrld.monsters_at(x, y) or wrld.bomb_at(x, y):
                             print("Threatened")
                             (esc_x, esc_y) = max(self.empty_cell_neighbors(node, wrld), key= lambda n: self.heuristic(n,(x,y)))
@@ -165,6 +176,64 @@ class TestCharacter(CharacterEntity):
         # return a move that get close to the goal
         return None
 
+    def expectimax_action(self, wrld, depth):
+        # go through the event list to see if the wrld is terminated
+        # Event.tpe: the type of the event. It is one of Event.BOMB_HIT_WALL,
+        # Event.BOMB_HIT_MONSTER, Event.BOMB_HIT_CHARACTER,
+        # Event.CHARACTER_KILLED_BY_MONSTER, Event.CHARACTER_FOUND_EXIT.
+        action = (0,0)
+        max_v = -infinity
+
+        c = next(iter(wrld.characters.values()))  # get the character position in the wrld
+        c = c[0]
+        m = next(iter(wrld.monsters.values()))  # get the monster position in the wrld
+        m = m[0]
+
+        # Go through the possible 9-moves of the character
+        # Loop through delta x
+        for dx_c in [-1, 0, 1]:
+            # Avoid out-of-bound indexing
+            if (c.x + dx_c >= 0) and (c.x + dx_c < wrld.width()):
+                # Loop through delta y
+                for dy_c in [-1, 0, 1]:
+                    # Avoid out-of-bound indexing
+                    if (c.y + dy_c >= 0) and (c.y + dy_c < wrld.height()):
+                        # No need to check impossible moves
+                        if not wrld.wall_at(c.x + dx_c, c.y + dy_c):
+                            # Set move in wrld
+                            c.move(dx_c, dy_c)
+
+                            n = 0  # number of options for monster actions
+                            sum_v = 0  # sum of all monster actions value
+
+                            # Go through the possible 8-moves of the monster
+                            # Loop through delta x
+                            for dx_m in [-1, 0, 1]:
+                                # Avoid out-of-bound indexing
+                                if (m.x + dx_m >= 0) and (m.x + dx_m < wrld.width()):
+                                    # Loop through delta y
+                                    for dy_m in [-1, 0, 1]:
+                                        # Make sure the monster is moving
+                                        if (dx_m != 0) or (dy_m != 0):
+                                            # Avoid out-of-bound indexing
+                                            if (m.y + dy_m >= 0) and (m.y + dy_m < wrld.height()):
+                                                # No need to check impossible moves
+                                                if not wrld.wall_at(m.x + dx_m, m.y + dy_m):
+                                                    # Set move in wrld
+                                                    m.move(dx_m, dy_m)
+                                                    # Get new world
+                                                    (new_wrld, new_events) = wrld.next()
+                                                    # do something with new world and events
+                                                    n += 1  # number of options for monster movements
+                                                    sum_v += self.expectimax(new_wrld, new_events, depth + 1)
+                            dist_to_best = self.heuristic((c.x+dx_c, c.y+dy_c), self.bestmove)
+                            expect = sum_v / n - dist_to_best
+                            if expect > max_v:
+                                action = (dx_c, dy_c)
+                                max_v = expect
+        print(action)
+        return action
+
     def expectimax(self, wrld, events, depth):
         # go through the event list to see if the wrld is terminated
         # Event.tpe: the type of the event. It is one of Event.BOMB_HIT_WALL,
@@ -177,14 +246,16 @@ class TestCharacter(CharacterEntity):
             elif event.tpe == event.CHARACTER_FOUND_EXIT:
                 # character is winning so best evaluation
                 return infinity
-            elif depth >= max_depth:
-                # reached searching depth, evaluate the wrld
-                # TODO: evaluation function used here, evaluation function can include events if needed
-                return self.evaluation(wrld)
+        if depth >= max_depth:
+            # reached searching depth, evaluate the wrld
+            # TODO: evaluation function used here
+            return self.evaluation(wrld)
 
         expect_values = []
-        c = next(iter(wrld.characters().values()))  # get the character position in the wrld
-        m = next(iter(wrld.monsters().values()))  # get the monster position in the wrld
+        c = next(iter(wrld.characters.values()))  # get the character position in the wrld
+        c = c[0]
+        m = next(iter(wrld.monsters.values()))  # get the monster position in the wrld
+        m = m[0]
 
         # Go through the possible 9-moves of the character
         # Loop through delta x
@@ -241,14 +312,14 @@ class TestCharacter(CharacterEntity):
             elif event.tpe == event.CHARACTER_FOUND_EXIT:
                 # character is winning so best evaluation
                 return infinity
-            elif depth >= max_depth:
-                # reached searching depth, evaluate the wrld
-                # TODO: evaluation function used here
-                return self.evaluation(wrld)
+        if depth >= max_depth:
+            # reached searching depth, evaluate the wrld
+            # TODO: evaluation function used here
+            return self.evaluation(wrld)
 
         v = infinity
         sum_v = 0
-        m = next(iter(wrld.monsters().values()))
+        m = next(iter(wrld.monsters.values()))
 
         # record all possible number of moves
         n = 0
@@ -280,9 +351,12 @@ class TestCharacter(CharacterEntity):
     #   wrld
     # return: evaluation value
     def evaluation(self, wrld):
-        c = next(iter(wrld.characters().values()))
-        return evaluation_bomb(wrld, c) + evaluation_monster_hard(wrld, c) \
-               + evaluation_explosion(wrld, c) + evaluation_straight_distance(wrld, c)
+        c = next(iter(wrld.characters.values()))
+        c = c[0]
+        
+        # return self.evaluation_bomb(wrld, c) + self.evaluation_monster_hard(wrld, c) \
+        #        + self.evaluation_explosion(wrld, c) + self.evaluation_straight_distance(wrld, c)
+        return 0
 
     # param: wrld, c
     # def:
@@ -307,7 +381,7 @@ class TestCharacter(CharacterEntity):
             # Avoid out-of-bound indexing
             if (x + dx >= 0) and (x + dx < wrld.width()):
                 if wrld.bomb_at(x + dx, y):
-                    bomg_score -= 100
+                    bomb_score -= 100
 
         return bomb_score
 
@@ -322,6 +396,7 @@ class TestCharacter(CharacterEntity):
 
         if wrld.explosion_at(x, y):
             return -2000
+        return 0
 
     # param: wrld, c
     # def:
@@ -330,7 +405,7 @@ class TestCharacter(CharacterEntity):
     # return: evaluation value between character and monster
     def evaluation_monster_hard(self, wrld, c):
         x = c.x
-        y = x.y
+        y = c.y
         # Check monster 2 grids around character
         monster_score = 0
         for dx in (-2, 2):
@@ -342,7 +417,7 @@ class TestCharacter(CharacterEntity):
                     if (dx != 0) or (dy != 0):
                         # Avoid out-of-bound indexing
                         if (y + dy >= 0) and (y + dy < wrld.height()):
-                            if wrld.monster_at(x + dx, y + dy):
+                            if wrld.monsters_at(x + dx, y + dy):
                                 # Monster at 2 grids away
                                 if abs(max(dx, dy)) == 2:
                                     # 1.
@@ -389,7 +464,7 @@ class TestCharacter(CharacterEntity):
                                     # 0
                                     # c
                                     # 2 moves till death
-                                    elif (x == m.x) or (y == m.y):
+                                    elif dx == 0 or dy == 0:
                                         m_score_2 = 0
 
                                         # 0 w 0
@@ -476,7 +551,7 @@ class TestCharacter(CharacterEntity):
     # return: evaluation value between character and monster (simplified)
     def evaluation_monster_easy(self, wrld, c):
         x = c.x
-        y = x.y
+        y = c.y
         # Check monster 2 grids around character
         monster_score = 0
         for dx in (-2, 2):
@@ -488,7 +563,7 @@ class TestCharacter(CharacterEntity):
                     if (dx != 0) or (dy != 0):
                         # Avoid out-of-bound indexing
                         if (y + dy >= 0) and (y + dy < wrld.height()):
-                            if wrld.monster_at(x + dx, y + dy):
+                            if wrld.monsters_at(x + dx, y + dy):
                                 # Monster at 2 grids away
                                 if abs(max(dx, dy)) == 2:
                                     monster_score -= 200
@@ -506,13 +581,13 @@ class TestCharacter(CharacterEntity):
         x = c.x
         y = c.y
         score = 0
-        distance = heuristic(c, wrld.exitcell)
+        distance = self.heuristic((x,y), wrld.exitcell)
 
         # closer character with the exit cell, higher the score
         if distance > 10:
             score += 5
         else:
-            score += (10 - ditance) * 20
+            score += (10 - distance) * 20
         return score
 
 class PriorityQueue:
