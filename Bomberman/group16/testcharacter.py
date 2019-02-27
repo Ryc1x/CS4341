@@ -130,10 +130,10 @@ class TestCharacter(CharacterEntity):
         monster_list = []
         # Go through neighboring cells
 
-        for dx in range(-size, size):
+        for dx in range(-size, size + 1):
             # Avoid out-of-bounds access
             if (x + dx >= 0) and (x + dx < wrld.width()):
-                for dy in range(-3, 4):
+                for dy in range(-size, size + 1):
                     # Avoid out-of-bounds access
                     if (y + dy >= 0) and (y + dy < wrld.height()):
                         if wrld.monsters_at(x, y):
@@ -149,12 +149,12 @@ class TestCharacter(CharacterEntity):
         c = next(iter(wrld.characters.values()))
         x = c.x
         y = c.y
-        for dx in range(-5, 5):
+        for dx in range(-5, 6):
             # Avoid out-of-bounds access
             if (x + dx >= 0) and (x + dx < wrld.width()):
                 if wrld.bomb_at(x + dx, y):
                     return True
-        for dy in range(-5, 5):
+        for dy in range(-5, 6):
             # Avoid out-of-bounds access
             if (y + dy >= 0) and (y + dy < wrld.height()):
                 if wrld.bomb_at(x, y + dy):
@@ -357,7 +357,7 @@ class TestCharacter(CharacterEntity):
         c = next(iter(wrld.characters.values()))
         c = c[0]
         
-        # return self.evaluation_bomb(wrld, c) + self.evaluation_monster_hard(wrld, c) \
+        # return self.evaluation_bomb(wrld, c) + self.evaluation_monster_easy(wrld, c) \
         #        + self.evaluation_explosion(wrld, c) + self.evaluation_straight_distance(wrld, c)
         return 0
 
@@ -373,14 +373,14 @@ class TestCharacter(CharacterEntity):
         bomb_score = 0
 
         # Check Vertical Position
-        for dy in (-5, 5):
+        for dy in (-5, 6):
             # Avoid out-of-bound indexing
             if (y + dy >= 0) and (y + dy < wrld.height()):
                 if wrld.bomb_at(x, y + dy):
                     bomb_score -= 100
 
         # Check Horizontal Position
-        for dx in (-5, 5):
+        for dx in (-5, 6):
             # Avoid out-of-bound indexing
             if (x + dx >= 0) and (x + dx < wrld.width()):
                 if wrld.bomb_at(x + dx, y):
@@ -411,11 +411,11 @@ class TestCharacter(CharacterEntity):
         y = c.y
         # Check monster 2 grids around character
         monster_score = 0
-        for dx in (-2, 2):
+        for dx in (-2, 3):
             # Avoid out-of-bound indexing
             if (x + dx >= 0) and (x + dx < wrld.width()):
                 # Loop through delta y
-                for dy in (-2, 2):
+                for dy in (-2, 3):
                     # Make sure the monster is moving
                     if (dx != 0) or (dy != 0):
                         # Avoid out-of-bound indexing
@@ -557,11 +557,11 @@ class TestCharacter(CharacterEntity):
         y = c.y
         # Check monster 2 grids around character
         monster_score = 0
-        for dx in (-2, 2):
+        for dx in (-2, 3):
             # Avoid out-of-bound indexing
             if (x + dx >= 0) and (x + dx < wrld.width()):
                 # Loop through delta y
-                for dy in (-2, 2):
+                for dy in (-2, 3):
                     # Make sure the monster is moving
                     if (dx != 0) or (dy != 0):
                         # Avoid out-of-bound indexing
