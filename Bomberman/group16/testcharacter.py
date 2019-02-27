@@ -136,7 +136,7 @@ class TestCharacter(CharacterEntity):
                 for dy in range(-size, size + 1):
                     # Avoid out-of-bounds access
                     if (y + dy >= 0) and (y + dy < wrld.height()):
-                        if wrld.monsters_at(x, y):
+                        if wrld.monsters_at(x + dx, y + dy):
                             monster_list.append((x + dx, y + dy))
 
         if len(monster_list) > 0:
