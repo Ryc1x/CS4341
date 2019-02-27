@@ -389,7 +389,7 @@ class TestCharacter(CharacterEntity):
                                     # 0
                                     # c
                                     # 2 moves till death
-                                    elif (x == m.x) or (y == m.y):
+                                    elif dx == 0 or dy == 0:
                                         m_score_2 = 0
 
                                         # 0 w 0
