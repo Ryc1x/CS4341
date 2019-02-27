@@ -118,6 +118,57 @@ class TestCharacter(CharacterEntity):
         # All done
         return (False, 0, 0)
 
+    # param:
+    #
+    # Checking monster in choosing size grid
+    # return a tuple with (true/false, array)
+    # returned array is contains tuple (x, y)
+    def monster_threaten(self, wrld, size):
+        c = next(iter(wrld.characters.values()))
+        x = c.x
+        y = c.y
+        monster_list = []
+        # Go through neighboring cells
+
+        for dx in range(-size, size):
+            # Avoid out-of-bounds access
+            if (x + dx >= 0) and (x + dx < wrld.width()):
+                for dy in range(-3, 4):
+                    # Avoid out-of-bounds access
+                    if (y + dy >= 0) and (y + dy < wrld.height()):
+                        if wrld.monsters_at(x, y):
+                            monster_list.append((x + dx, y + dy))
+
+        if len(monster_list) > 0:
+            return (True, monster_list)
+        else:
+            return (False, monster_list)
+
+    # Checking bomb in straight line
+    def bomb_threaten(self, wrld):
+        c = next(iter(wrld.characters.values()))
+        x = c.x
+        y = c.y
+        for dx in range(-5, 5):
+            # Avoid out-of-bounds access
+            if (x + dx >= 0) and (x + dx < wrld.width()):
+                if wrld.bomb_at(x + dx, y):
+                    return True
+        for dy in range(-5, 5):
+            # Avoid out-of-bounds access
+            if (y + dy >= 0) and (y + dy < wrld.height()):
+                if wrld.bomb_at(x, y + dy):
+                    return True
+        return False
+
+    def explosion_threaten(self, wrld):
+        c = next(iter(wrld.characters.values()))
+        if wrld.explosion_at(c.x, c.y):
+            return True
+        else:
+            return False
+
+
     # heuristic from one location to another
     # node is just a tuple with (x, y)
     def heuristic(self, a, b):
@@ -297,54 +348,6 @@ class TestCharacter(CharacterEntity):
                             expect_values.append(sum_v / n)
         v = max(expect_values)
         return v
-
-    # expect pseudocode:
-    # def expValue(s)
-    #     values = [value(s’) for s’ in successors(s)]
-    #     weights = [probability(s, s’) for s’ in successors(s)]
-    #     return expectation(values, weights)
-    # param: wlrd is a senseworld object which contains events
-    def expectimax_m(self, wrld, events, depth):
-        for event in events:
-            if event.tpe == event.BOMB_HIT_CHARACTER or event.tpe == event.CHARACTER_KILLED_BY_MONSTER:
-                # character is dead so worst evaluation
-                return -infinity
-            elif event.tpe == event.CHARACTER_FOUND_EXIT:
-                # character is winning so best evaluation
-                return infinity
-        if depth >= max_depth:
-            # reached searching depth, evaluate the wrld
-            # TODO: evaluation function used here
-            return self.evaluation(wrld)
-
-        v = infinity
-        sum_v = 0
-        m = next(iter(wrld.monsters.values()))
-
-        # record all possible number of moves
-        n = 0
-
-        # Go through the possible 8-moves of the monster
-        # Loop through delta x
-        for dx in [-1, 0, 1]:
-            # Avoid out-of-bound indexing
-            if (m.x + dx >= 0) and (m.x + dx < wrld.width()):
-                # Loop through delta y
-                for dy in [-1, 0, 1]:
-                    # Make sure the monster is moving
-                    if (dx != 0) or (dy != 0):
-                        # Avoid out-of-bound indexing
-                        if (m.y + dy >= 0) and (m.y + dy < wrld.height()):
-                            # No need to check impossible moves
-                            if not wrld.wall_at(m.x + dx, m.y + dy):
-                                # Set move in wrld
-                                m.move(dx, dy)
-                                # Get new world
-                                (new_wrld, new_events) = wrld.next()
-                                # TODO: do something with newworld and events
-                                n += 1
-                                sum_v += self.expectimax_c(new_wrld, new_events, depth + 1)
-        return sum_v / n
 
     # param: wrld
     # def:
