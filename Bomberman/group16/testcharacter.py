@@ -42,13 +42,11 @@ class TestCharacter(CharacterEntity):
             self.move(escape_x - c_position[0], escape_y - c_position[1])
         elif state == "Stuck":
             # we will be stuck and need bomb
-<<<<<<< HEAD
+
             if not self.any_explosion(wrld):
                 self.place_bomb()
             # will need to escape from bomb
-=======
-            self.place_bomb()  # will need to escape from bomb
->>>>>>> 9809b95f81ac933f39bce9e6bcf4d4f51f9ad1af
+
         elif state == "has path to exit":
             # move the character by one step
             move_x = a_star_move[0][0] - c_position[0]
@@ -89,19 +87,11 @@ class TestCharacter(CharacterEntity):
 
     def threatens(self, node, wrld):
         # Go through neighboring cells
-<<<<<<< HEAD
         for dx in range(-3,4):
             # Avoid out-of-bounds access
             x = node[0] + dx
             if (x >= 0) and (x < wrld.width()):
                 for dy in range(-3,4):
-=======
-        for dx in range(-2, 3):
-            # Avoid out-of-bounds access
-            x = node[0] + dx
-            if (x >= 0) and (x < wrld.width()):
-                for dy in range(-2, 3):
->>>>>>> 9809b95f81ac933f39bce9e6bcf4d4f51f9ad1af
                     y = node[1] + dy
                     # Avoid out-of-bounds access
                     if (y >= 0) and (y < wrld.height()):
@@ -109,14 +99,8 @@ class TestCharacter(CharacterEntity):
                         self.set_cell_color(x, y, Fore.GREEN + Back.GREEN)
                         if wrld.monsters_at(x, y) or wrld.bomb_at(x,y):
                             print("Threatened")
-<<<<<<< HEAD
                             (esc_x, esc_y) = max(self.empty_cell_neighbors(node, wrld), key= lambda n: self.heuristic(n,(x,y)))
-=======
-                            (esc_x, esc_y) = max(self.empty_cell_neighbors(node, wrld),
-                                                 key=lambda n: self.heuristic(n, (x, y)))
-                            print(
-                                sorted(self.empty_cell_neighbors(node, wrld), key=lambda n: self.heuristic(n, (x, y))))
->>>>>>> 9809b95f81ac933f39bce9e6bcf4d4f51f9ad1af
+
 
                             print(esc_x, esc_y)
                             return (True, esc_x, esc_y)
@@ -275,6 +259,247 @@ class TestCharacter(CharacterEntity):
                                 n += 1
                                 sum_v += self.expectimax_c(new_wrld, new_events, depth + 1)
         return sum_v / n
+
+    # param: wrld
+    # def:
+    #   wrld
+    # return: evaluation value
+    def evaluation(self, wrld):
+        c = next(iter(wrld.characters().values()))
+        return evaluation_bomb(wrld, c) + evaluation_monster_hard(wrld, c) \
+               + evaluation_explosion(wrld, c) + evaluation_straight_distance(wrld, c)
+
+    # param: wrld, c
+    # def:
+    #   wrld,
+    #   c,
+    # return: evaluation value between character and bomb
+    def evaluation_bomb(self, wrld, c):
+        x = c.x
+        y = c.y
+        # Check bomb in 5 grids distance (because bomb has 4 grids explosion extension)
+        bomb_score = 0
+
+        # Check Vertical Position
+        for dy in (-5, 5):
+            # Avoid out-of-bound indexing
+            if (y + dy >= 0) and (y + dy < wrld.height()):
+                if wrld.bomb_at(x, y + dy):
+                    bomb_score -= 100
+
+        # Check Horizontal Position
+        for dx in (-5, 5):
+            # Avoid out-of-bound indexing
+            if (x + dx >= 0) and (x + dx < wrld.width()):
+                if wrld.bomb_at(x + dx, y):
+                    bomg_score -= 100
+
+        return bomb_score
+
+    # param: wrld, c
+    # def:
+    #   wrld,
+    #   c,
+    # return: evaluation value between character and explosion area
+    def evaluation_explosion(self, wrld, c):
+        x = c.x
+        y = c.y
+
+        if wrld.explosion_at(x, y):
+            return -2000
+
+    # param: wrld, c
+    # def:
+    #   wrld,
+    #   c,
+    # return: evaluation value between character and monster
+    def evaluation_monster_hard(self, wrld, c):
+        x = c.x
+        y = x.y
+        # Check monster 2 grids around character
+        monster_score = 0
+        for dx in (-2, 2):
+            # Avoid out-of-bound indexing
+            if (x + dx >= 0) and (x + dx < wrld.width()):
+                # Loop through delta y
+                for dy in (-2, 2):
+                    # Make sure the monster is moving
+                    if (dx != 0) or (dy != 0):
+                        # Avoid out-of-bound indexing
+                        if (y + dy >= 0) and (y + dy < wrld.height()):
+                            if wrld.monster_at(x + dx, y + dy):
+                                # Monster at 2 grids away
+                                if abs(max(dx, dy)) == 2:
+                                    # 1.
+                                    # Monster is 2 grids away at a diagonal direction:
+                                    # m 0 0
+                                    # 0 0 0
+                                    # 0 0 c
+                                    # 2 moves till death
+                                    if (abs(dx) == 2) and (abs(dy) == 2):
+                                        m_score_1 = 0
+
+                                        # m 0 0
+                                        # 0 w 0
+                                        # 0 0 c
+                                        # 3 moves till death
+                                        if wrld.wall_at(x + int (dx / 2), y + int (dy / 2)):
+
+                                            # m w 0
+                                            # 0 w 0
+                                            # 0 w c
+                                            #
+                                            # m 0 0
+                                            # w w w
+                                            # 0 0 c
+                                            # 4 moves till death
+                                            if ((wrld.wall_at(x + int (dx / 2), c.y) and
+                                                 wrld.wall_at(x + int (dx / 2), y + dy)) or
+                                                    (wrld.wall_at(x, y + int (dy / 2) and
+                                                        wrld.wall_at(x + dx, y + int (dy / 2))))):
+                                                m_score_1 -= 100
+                                            else:
+                                                m_score_1 -= 100
+
+                                        if m_score_1 == 0:
+                                            m_score_1 = -1000
+
+                                        monster_score += m_score_1
+
+                                    # 2.
+                                    # Monster is 2 grids away in a straight line:
+                                    # m 0 c
+                                    #
+                                    # m
+                                    # 0
+                                    # c
+                                    # 2 moves till death
+                                    elif (x == m.x) or (y == m.y):
+                                        m_score_2 = 0
+
+                                        # 0 w 0
+                                        # m w c
+                                        # 0 w 0
+                                        # 4 moves till death
+                                        if abs(dx) == 2:
+                                            # check boundary
+                                            if y + 1 <= wrld.height() and y - 1 >= 0:
+                                                if wrld.wall_at(x + int (dx / 2), y + 1) and \
+                                                        wrld.wall_at(x + int (dx / 2), y) and \
+                                                        wrld.wall_at(x + int (dx / 2), y - 1):
+                                                    m_score_2 -= 100
+                                            elif y + 1 > wrld.height():
+                                                if wrld.wall_at(x + int (dx / 2), y) and \
+                                                        wrld.wall_at(x + int (dx / 2), y - 1):
+                                                    m_score_2 -= 100
+                                            else:
+                                                if wrld.wall_at(x + int (dx / 2), y + 1) and \
+                                                        wrld.wall_at(x + int (dx / 2), y):
+                                                    m_score_2 -= 100
+
+                                        # 0 m 0
+                                        # w w w
+                                        # 0 c 0
+                                        # 4 moves till death
+                                        elif abs(dy) == 2:
+                                            # check boundary
+                                            if x + 1 <= wrld.width() and x - 1 >= 0:
+                                                if wrld.wall_at(x - 1, y + int (dy / 2)) and \
+                                                        wrld.wall_at(x, y + int (dy / 2)) and \
+                                                        wrld.wall_at(x + 1, int (dy / 2)):
+                                                    m_score_2 -= 100
+                                            elif x + 1 > wrld.width():
+                                                if wrld.wall_at(x - 1, y + int (dy / 2)) and \
+                                                        wrld.wall_at(x, y + int (dy / 2)):
+                                                    m_score_2 -= 100
+                                            else:
+                                                if wrld.wall_at(x, y + int (dy / 2)) and \
+                                                        wrld.wall_at(x + 1, int (dy / 2)):
+                                                    m_score_2 -= 100
+
+                                        if m_score_2 == 0:
+                                            m_score_2 = -1000
+
+                                        monster_score += m_score_2
+
+                                    # 3.
+                                    # Monster is 2 grids away in one line difference in one of x,y direction:
+                                    # m 0 0
+                                    # 0 0 c
+                                    else:
+                                        m_score_3 = 0
+
+                                        # m w 0
+                                        # 0 w c
+                                        # 3 moves till death
+                                        if abs(dx) == 2:
+                                            if wrld.wall_at(x + int (dx / 2), y) and \
+                                                    wrld.wall_at(x + int (dx / 2), y + dy):
+                                                monster_score -= 200
+
+                                        # m 0
+                                        # w w
+                                        # 0 c
+                                        elif abs(dy) == 2:
+                                            if wrld.wall_at(x, y + int (dy / 2)) and \
+                                                    wrld.wall_at(x + dx, int (dy / 2)):
+                                                monster_score -= 200
+
+                                    if m_score_3 == 0:
+                                        m_score_3 = -1000
+                                    monster_score += m_score_3
+                                # Monster at 1 grid away
+                                else:
+                                    monster_score -= 2000
+
+        return monster_score
+
+    # param: wrld, c
+    # def:
+    #   wrld,
+    #   c,
+    # return: evaluation value between character and monster (simplified)
+    def evaluation_monster_easy(self, wrld, c):
+        x = c.x
+        y = x.y
+        # Check monster 2 grids around character
+        monster_score = 0
+        for dx in (-2, 2):
+            # Avoid out-of-bound indexing
+            if (x + dx >= 0) and (x + dx < wrld.width()):
+                # Loop through delta y
+                for dy in (-2, 2):
+                    # Make sure the monster is moving
+                    if (dx != 0) or (dy != 0):
+                        # Avoid out-of-bound indexing
+                        if (y + dy >= 0) and (y + dy < wrld.height()):
+                            if wrld.monster_at(x + dx, y + dy):
+                                # Monster at 2 grids away
+                                if abs(max(dx, dy)) == 2:
+                                    monster_score -= 200
+                                else:
+                                    monster_score -= 1000
+
+        return monster_score
+
+    # param: wrld, c
+    # def:
+    #   wrld,
+    #   c,
+    # return evaluation value between character and exit cell
+    def evaluation_straight_distance(self, wrld, c):
+        x = c.x
+        y = c.y
+        score = 0
+        distance = heuristic(c, wrld.exitcell)
+
+        # closer character with the exit cell, higher the score
+        if distance > 10:
+            score += 5
+        else:
+            score += (10 - ditance) * 20
+        return score
+
 
 
 class PriorityQueue:
