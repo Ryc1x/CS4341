@@ -80,13 +80,14 @@ class TestCharacter(CharacterEntity):
 
     def any_explosion(self, wrld):
         for x in range(0, wrld.width()):
-            for y in range (0, wrld.height()):
+            for y in range(0, wrld.height()):
                 if (wrld.explosion_at(x, y)):
                     return True
         return False
 
     def threatens(self, node, wrld):
         # Go through neighboring cells
+
         for dx in range(-3,4):
             # Avoid out-of-bounds access
             x = node[0] + dx
@@ -97,10 +98,9 @@ class TestCharacter(CharacterEntity):
                     if (y >= 0) and (y < wrld.height()):
                         # If the cell is not safe, rate it really low
                         self.set_cell_color(x, y, Fore.GREEN + Back.GREEN)
-                        if wrld.monsters_at(x, y) or wrld.bomb_at(x,y):
+                        if wrld.monsters_at(x, y) or wrld.bomb_at(x, y):
                             print("Threatened")
                             (esc_x, esc_y) = max(self.empty_cell_neighbors(node, wrld), key= lambda n: self.heuristic(n,(x,y)))
-
 
                             print(esc_x, esc_y)
                             return (True, esc_x, esc_y)
@@ -160,20 +160,12 @@ class TestCharacter(CharacterEntity):
             if came_from[min_to_exit] == start:
                 return min_to_exit, "no path to exit"  # next move from start to in the A* path
             min_to_exit = came_from[min_to_exit]
+
         # goal can not be reached
         # return a move that get close to the goal
-
         return None
 
-    # def value(s)
-    #   if s is a max node return maxValue(s)
-    #   if s is an exp node return expValue(s)
-    #   if s is a terminal node return evaluation(s)
-
-    # max pseudocode:
-    # def maxValue(s)
-    #     values = [value(s’) for s’ in successors(s)] return max(values)
-    def expectimax_c(self, wrld, events, depth):
+    def expectimax(self, wrld, events, depth):
         # go through the event list to see if the wrld is terminated
         # Event.tpe: the type of the event. It is one of Event.BOMB_HIT_WALL,
         # Event.BOMB_HIT_MONSTER, Event.BOMB_HIT_CHARACTER,
@@ -190,26 +182,49 @@ class TestCharacter(CharacterEntity):
                 # TODO: evaluation function used here, evaluation function can include events if needed
                 return self.evaluation(wrld)
 
-        v = -infinity
-        c = next(iter(wrld.characters().values()))  # get the character in the wrld
+        expect_values = []
+        c = next(iter(wrld.characters().values()))  # get the character position in the wrld
+        m = next(iter(wrld.monsters().values()))  # get the monster position in the wrld
 
         # Go through the possible 9-moves of the character
         # Loop through delta x
-        for dx in [-1, 0, 1]:
+        for dx_c in [-1, 0, 1]:
             # Avoid out-of-bound indexing
-            if (c.x + dx >= 0) and (c.x + dx < wrld.width()):
+            if (c.x + dx_c >= 0) and (c.x + dx_c < wrld.width()):
                 # Loop through delta y
-                for dy in [-1, 0, 1]:
+                for dy_c in [-1, 0, 1]:
                     # Avoid out-of-bound indexing
-                    if (c.y + dy >= 0) and (c.y + dy < wrld.height()):
+                    if (c.y + dy_c >= 0) and (c.y + dy_c < wrld.height()):
                         # No need to check impossible moves
-                        if not wrld.wall_at(c.x + dx, c.y + dy):
+                        if not wrld.wall_at(c.x + dx_c, c.y + dy_c):
                             # Set move in wrld
-                            c.move(dx, dy)
-                            # Get new world
-                            (new_wrld, new_events) = wrld.next()
-                            # TODO: do something with newworld and events
-                            v = max(v, self.expectimax_m(new_wrld, new_events, depth + 1))
+                            c.move(dx_c, dy_c)
+
+                            n = 0  # number of options for monster actions
+                            sum_v = 0  # sum of all monster actions value
+
+                            # Go through the possible 8-moves of the monster
+                            # Loop through delta x
+                            for dx_m in [-1, 0, 1]:
+                                # Avoid out-of-bound indexing
+                                if (m.x + dx_m >= 0) and (m.x + dx_m < wrld.width()):
+                                    # Loop through delta y
+                                    for dy_m in [-1, 0, 1]:
+                                        # Make sure the monster is moving
+                                        if (dx_m != 0) or (dy_m != 0):
+                                            # Avoid out-of-bound indexing
+                                            if (m.y + dy_m >= 0) and (m.y + dy_m < wrld.height()):
+                                                # No need to check impossible moves
+                                                if not wrld.wall_at(m.x + dx_m, m.y + dy_m):
+                                                    # Set move in wrld
+                                                    m.move(dx_m, dy_m)
+                                                    # Get new world
+                                                    (new_wrld, new_events) = wrld.next()
+                                                    # do something with new world and events
+                                                    n += 1  # number of options for monster movements
+                                                    sum_v += self.expectimax(new_wrld, new_events, depth + 1)
+                            expect_values.append(sum_v / n)
+        v = max(expect_values)
         return v
 
     # expect pseudocode:
@@ -499,8 +514,6 @@ class TestCharacter(CharacterEntity):
         else:
             score += (10 - ditance) * 20
         return score
-
-
 
 class PriorityQueue:
     def __init__(self):
