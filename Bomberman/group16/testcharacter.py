@@ -8,8 +8,8 @@ from colorama import Fore, Back
 import heapq
 import math
 
-infinity = float('inf')
-max_depth = 3  # number of depth for expectimax search
+infinity = math.inf
+max_depth = 2  # number of depth for expectimax search
 
 
 class TestCharacter(CharacterEntity):
@@ -25,12 +25,26 @@ class TestCharacter(CharacterEntity):
         c_position = (self.x, self.y)
         a_star_move = self.a_star_search(c_position, wrld.exitcell, wrld)
 
-        (threaten, escape_x, escape_y) = self.threatens(c_position, wrld) # currently not using threaten function
+        # (threaten, escape_x, escape_y) = self.threatens(c_position, wrld) # currently not using threaten function
 
         # if a_star_move returns none, there is no way to go closer to exit
         if a_star_move is not None:
             self.bestmove = a_star_move[0]
         print(self.bestmove)
+
+        # Place the bomb as soon as I can
+        self.place_bomb()
+        print("character at:", c_position)
+        # Take the move based on expectimax
+        (dx,dy) = self.expectimax_action(wrld, 0)
+        print("taking move:", dx, dy)
+        self.move(dx,dy)
+
+        return
+
+        ########### NOTE ############
+        # FOLLOWING LINES INGNORED! #
+        #############################
 
         # Part 2
         # finds the next position on the A star path to exit
@@ -39,9 +53,10 @@ class TestCharacter(CharacterEntity):
         # modified threaten to be bomb thread and monster thread
         # TODO: Escape bomb when bomb thread
         # expectimax when monster threaten
-        if self.monster_threaten(wrld, 3)[0] and self.bomb_threaten(wrld):
+        mthreaten = self.monster_threaten(wrld, 3)[0]
+        if mthreaten and self.bomb_threaten(wrld):
             state = "Monster and bomb"
-        elif self.monster_threaten(wrld, 3)[0]:
+        elif mthreaten:
             state = "Monster"
         elif self.bomb_threaten(wrld):
             state = "Bomb"
@@ -51,22 +66,24 @@ class TestCharacter(CharacterEntity):
             state = a_star_move[1]  # can be "has path to exit" or "no path to exit"
 
         # Part 3
-        # if state == "Stuck":
-        #     if not self.any_explosion(wrld):
-        #         self.place_bomb()
-
-        # (dx, dy) = self.expectimax_action(wrld, 0)
-        # self.move(dx, dy)
-        # return
-
-        # NOT USED BELOW
+        if state == "Stuck":
+            # we will be stuck and need bomb
+            if not self.any_explosion(wrld):
+                self.place_bomb()  # will need to escape from bomb
+        else:
+            (dx,dy) = self.expectimax_action(wrld, 0)
+            print("taking move:(", dx, dy, ")")
+            self.move(dx,dy)
+        return
+        ## ignored case for now
 
         if state == "Monster and bomb":
             print("Monster and bomb near me!!!!!!!!!!!!")
             self.move(0, 0)
         elif state == "Monster":
             print("Monster !!!!!!!!!!!!!!")
-            self.expectimax_action(wrld, 0)
+            (dx,dy) = self.expectimax_action(wrld, 0)
+            self.move(dx,dy)
         elif state == "Bomb":
             print("Bomb!!!!!!!!!!!!!!!!!!!!")
             self.move(0, 0)
@@ -126,11 +143,11 @@ class TestCharacter(CharacterEntity):
                         # If the cell is not safe, rate it really low
                         # self.set_cell_color(x, y, Fore.GREEN + Back.GREEN)
                         if wrld.monsters_at(x, y) or wrld.bomb_at(x, y):
-                            print("Threatened")
+                            # print("Threatened")
                             (esc_x, esc_y) = max(self.empty_cell_neighbors(node, wrld),
                                                  key=lambda n: self.heuristic(n, (x, y)))
 
-                            print(esc_x, esc_y)
+                            # print(esc_x, esc_y)
                             return (True, esc_x, esc_y)
         # All done
         return (False, 0, 0)
@@ -256,6 +273,10 @@ class TestCharacter(CharacterEntity):
 
         c = next(iter(wrld.characters.values()))  # get the character position in the wrld
         c = c[0]
+        # TODO here need fix bug when no monster, will be killed by bomb
+        if len(wrld.monsters.values()) == 0:
+            return (self.bestmove[0]-self.x, self.bestmove[1]-self.y)
+        # TODO add support for 0/1/2 monsters
         m = next(iter(wrld.monsters.values()))  # get the monster position in the wrld
         m = m[0]
 
@@ -298,10 +319,13 @@ class TestCharacter(CharacterEntity):
                                                     sum_v += self.expectimax(new_wrld, new_events, depth + 1)
                             dist_to_best = self.heuristic((c.x + dx_c, c.y + dy_c), self.bestmove)
                             expect = sum_v / n - dist_to_best  # TODO: adding a weight to the dist_to_best
+                            print("action:", dx_c, dy_c)
+                            print("value:", expect)
                             if expect > max_v:
                                 action = (dx_c, dy_c)
                                 max_v = expect
-        print(action)
+        print("max action:", action)
+        print("max value:", max_v)
         return action
 
     def expectimax(self, wrld, events, depth):
@@ -318,12 +342,15 @@ class TestCharacter(CharacterEntity):
                 return infinity
         if depth >= max_depth:
             # reached searching depth, evaluate the wrld
-            # TODO: evaluation function used here
             return self.evaluation(wrld)
 
         expect_values = []
         c = next(iter(wrld.characters.values()))  # get the character position in the wrld
         c = c[0]  # c was a list
+        # TODO here need fix bug when no monster, will be killed by bomb
+        if len(wrld.monsters.values()) == 0: 
+            return infinity
+        # TODO add support for 0/1/2 monsters
         m = next(iter(wrld.monsters.values()))  # get the monster position in the wrld
         m = m[0]  # m was a list
 
@@ -375,9 +402,27 @@ class TestCharacter(CharacterEntity):
     def evaluation(self, wrld):
         c = next(iter(wrld.characters.values()))
         c = c[0]
+        return self.eval1(wrld, c)
+        # NOTE NOT USED EVAL FUNCTIONS
+        # return self.evaluation_bomb(wrld, c) + self.evaluation_monster_easy(wrld, c) #+ self.evaluation_explosion(wrld, c)
+        # + self.evaluation_straight_distance(wrld, c)
 
-        return self.evaluation_bomb(wrld, c) + self.evaluation_monster_easy(wrld, c) #+ self.evaluation_explosion(wrld, c)
-        + self.evaluation_straight_distance(wrld, c)
+    # Evaluate world based on:
+    #   1. distance to monster
+    #   2. 
+    def eval1(self, wrld, c):
+        if len(wrld.monsters.values()) == 0: return 0
+        mlist = next(iter(wrld.monsters.values()))
+        score = 0
+        for m in mlist:
+            distx = abs(c.x - m.x)
+            disty = abs(c.y - m.y)
+            if distx <= 2 and disty <= 2:
+                return -10000
+            # higher -> stay more distance away (usually: 100~1000)
+            sensitivity = 500 
+            score -= sensitivity / (distx+disty)**2
+        return score
 
     # param: wrld, c
     # def:
