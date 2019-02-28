@@ -274,11 +274,22 @@ class TestCharacter(CharacterEntity):
         c = next(iter(wrld.characters.values()))  # get the character position in the wrld
         c = c[0]
         # TODO here need fix bug when no monster, will be killed by bomb
-        if len(wrld.monsters.values()) == 0:
-            return (self.bestmove[0]-self.x, self.bestmove[1]-self.y)
+
+        mlist = wrld.monsters.values()
+
         # TODO add support for 0/1/2 monsters
-        m = next(iter(wrld.monsters.values()))  # get the monster position in the wrld
-        m = m[0]
+        noMonster = 0
+        if len(mlist) == 0:
+            noMonster = 1
+        elif len(mlist) == 1:
+            m = next(iter(mlist))[0]
+        else:
+            m1 = next(iter(mlist))[0]
+            m2 = next(iter(mlist))[0]
+            if max(m1.x - c.x, m1.y - c.y) > max(m2.x - c.x, m2.y - c.y):
+                m = m2  # m2 is closer to c
+            else:
+                m = m1  # m1 is closer to c
 
         # Go through the possible 9-moves of the character
         # Loop through delta x
@@ -293,37 +304,46 @@ class TestCharacter(CharacterEntity):
                         if not wrld.wall_at(c.x + dx_c, c.y + dy_c):
                             # Set move in wrld
                             c.move(dx_c, dy_c)
+                            if noMonster:
+                                # TODO
+                                (new_wrld, new_events) = wrld.next()
+                                dist_to_best = self.heuristic((c.x + dx_c, c.y + dy_c), self.bestmove)
+                                expect = self.expectimax(new_wrld, new_events, depth + 1)
+                                expect -= dist_to_best
+                                if expect > max_v:
+                                    action = (dx_c, dy_c)
+                                    max_v = expect
+                            else:
+                                n = 0  # number of options for monster actions
+                                sum_v = 0  # sum of all monster actions value
 
-                            n = 0  # number of options for monster actions
-                            sum_v = 0  # sum of all monster actions value
-
-                            # Go through the possible 8-moves of the monster
-                            # Loop through delta x
-                            for dx_m in [-1, 0, 1]:
-                                # Avoid out-of-bound indexing
-                                if (m.x + dx_m >= 0) and (m.x + dx_m < wrld.width()):
-                                    # Loop through delta y
-                                    for dy_m in [-1, 0, 1]:
-                                        # Make sure the monster is moving
-                                        if (dx_m != 0) or (dy_m != 0):
-                                            # Avoid out-of-bound indexing
-                                            if (m.y + dy_m >= 0) and (m.y + dy_m < wrld.height()):
-                                                # No need to check impossible moves
-                                                if not wrld.wall_at(m.x + dx_m, m.y + dy_m):
-                                                    # Set move in wrld
-                                                    m.move(dx_m, dy_m)
-                                                    # Get new world
-                                                    (new_wrld, new_events) = wrld.next()
-                                                    # do something with new world and events
-                                                    n += 1  # number of options for monster movements
-                                                    sum_v += self.expectimax(new_wrld, new_events, depth + 1)
-                            dist_to_best = self.heuristic((c.x + dx_c, c.y + dy_c), self.bestmove)
-                            expect = sum_v / n - dist_to_best  # TODO: adding a weight to the dist_to_best
-                            print("action:", dx_c, dy_c)
-                            print("value:", expect)
-                            if expect > max_v:
-                                action = (dx_c, dy_c)
-                                max_v = expect
+                                # Go through the possible 8-moves of the monster
+                                # Loop through delta x
+                                for dx_m in [-1, 0, 1]:
+                                    # Avoid out-of-bound indexing
+                                    if (m.x + dx_m >= 0) and (m.x + dx_m < wrld.width()):
+                                        # Loop through delta y
+                                        for dy_m in [-1, 0, 1]:
+                                            # Make sure the monster is moving
+                                            if (dx_m != 0) or (dy_m != 0):
+                                                # Avoid out-of-bound indexing
+                                                if (m.y + dy_m >= 0) and (m.y + dy_m < wrld.height()):
+                                                    # No need to check impossible moves
+                                                    if not wrld.wall_at(m.x + dx_m, m.y + dy_m):
+                                                        # Set move in wrld
+                                                        m.move(dx_m, dy_m)
+                                                        # Get new world
+                                                        (new_wrld, new_events) = wrld.next()
+                                                        # do something with new world and events
+                                                        n += 1  # number of options for monster movements
+                                                        sum_v += self.expectimax(new_wrld, new_events, depth + 1)
+                                dist_to_best = self.heuristic((c.x + dx_c, c.y + dy_c), self.bestmove)
+                                expect = sum_v / n - dist_to_best  # TODO: adding a weight to the dist_to_best
+                                print("action:", dx_c, dy_c)
+                                print("value:", expect)
+                                if expect > max_v:
+                                    action = (dx_c, dy_c)
+                                    max_v = expect
         print("max action:", action)
         print("max value:", max_v)
         return action
@@ -336,10 +356,10 @@ class TestCharacter(CharacterEntity):
         for event in events:
             if event.tpe == event.BOMB_HIT_CHARACTER or event.tpe == event.CHARACTER_KILLED_BY_MONSTER:
                 # character is dead so worst evaluation
-                return -infinity
+                return -10000000000
             elif event.tpe == event.CHARACTER_FOUND_EXIT:
                 # character is winning so best evaluation
-                return infinity
+                return 10000000
         if depth >= max_depth:
             # reached searching depth, evaluate the wrld
             return self.evaluation(wrld)
@@ -348,11 +368,22 @@ class TestCharacter(CharacterEntity):
         c = next(iter(wrld.characters.values()))  # get the character position in the wrld
         c = c[0]  # c was a list
         # TODO here need fix bug when no monster, will be killed by bomb
-        if len(wrld.monsters.values()) == 0: 
-            return infinity
         # TODO add support for 0/1/2 monsters
-        m = next(iter(wrld.monsters.values()))  # get the monster position in the wrld
-        m = m[0]  # m was a list
+
+        max_v = -infinity
+        mlist = wrld.monsters.values()
+        noMonster = 0
+        if len(mlist) == 0:
+            noMonster = 1
+        elif len(mlist) == 1:
+            m = next(iter(mlist))[0]
+        else:
+            m1 = next(iter(mlist))[0]
+            m2 = next(iter(mlist))[0]
+            if max(m1.x - c.x, m1.y - c.y) > max(m2.x - c.x, m2.y - c.y):
+                m = m2  # m2 is closer to c
+            else:
+                m = m1  # m1 is closer to c
 
         # Go through the possible 9-moves of the character
         # Loop through delta x
@@ -367,31 +398,36 @@ class TestCharacter(CharacterEntity):
                         if not wrld.wall_at(c.x + dx_c, c.y + dy_c):
                             # Set move in wrld
                             c.move(dx_c, dy_c)
+                            if noMonster:
+                                # TODO:
+                                (new_wrld, new_events) = wrld.next()
+                                expect = self.expectimax(new_wrld, new_events, depth + 1)
+                                expect_values.append(expect)
+                            else:
+                                n = 0  # number of options for monster actions
+                                sum_v = 0  # sum of all monster actions value
 
-                            n = 0  # number of options for monster actions
-                            sum_v = 0  # sum of all monster actions value
-
-                            # Go through the possible 8-moves of the monster
-                            # Loop through delta x
-                            for dx_m in [-1, 0, 1]:
-                                # Avoid out-of-bound indexing
-                                if (m.x + dx_m >= 0) and (m.x + dx_m < wrld.width()):
-                                    # Loop through delta y
-                                    for dy_m in [-1, 0, 1]:
-                                        # Make sure the monster is moving
-                                        if (dx_m != 0) or (dy_m != 0):
-                                            # Avoid out-of-bound indexing
-                                            if (m.y + dy_m >= 0) and (m.y + dy_m < wrld.height()):
-                                                # No need to check impossible moves
-                                                if not wrld.wall_at(m.x + dx_m, m.y + dy_m):
-                                                    # Set move in wrld
-                                                    m.move(dx_m, dy_m)
-                                                    # Get new world
-                                                    (new_wrld, new_events) = wrld.next()
-                                                    # do something with new world and events
-                                                    n += 1  # number of options for monster movements
-                                                    sum_v += self.expectimax(new_wrld, new_events, depth + 1)
-                            expect_values.append(sum_v / n)
+                                # Go through the possible 8-moves of the monster
+                                # Loop through delta x
+                                for dx_m in [-1, 0, 1]:
+                                    # Avoid out-of-bound indexing
+                                    if (m.x + dx_m >= 0) and (m.x + dx_m < wrld.width()):
+                                        # Loop through delta y
+                                        for dy_m in [-1, 0, 1]:
+                                            # Make sure the monster is moving
+                                            if (dx_m != 0) or (dy_m != 0):
+                                                # Avoid out-of-bound indexing
+                                                if (m.y + dy_m >= 0) and (m.y + dy_m < wrld.height()):
+                                                    # No need to check impossible moves
+                                                    if not wrld.wall_at(m.x + dx_m, m.y + dy_m):
+                                                        # Set move in wrld
+                                                        m.move(dx_m, dy_m)
+                                                        # Get new world
+                                                        (new_wrld, new_events) = wrld.next()
+                                                        # do something with new world and events
+                                                        n += 1  # number of options for monster movements
+                                                        sum_v += self.expectimax(new_wrld, new_events, depth + 1)
+                                expect_values.append(sum_v / n)
         v = max(expect_values)
         return v
 
@@ -420,7 +456,7 @@ class TestCharacter(CharacterEntity):
             if distx <= 2 and disty <= 2:
                 return -10000
             # higher -> stay more distance away (usually: 100~1000)
-            sensitivity = 500 
+            sensitivity = 500
             score -= sensitivity / (distx+disty)**2
         return score
 
