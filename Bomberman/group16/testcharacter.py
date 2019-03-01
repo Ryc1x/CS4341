@@ -460,7 +460,9 @@ class TestCharacter(CharacterEntity):
             distx = abs(c.x - m.x)
             disty = abs(c.y - m.y)
             if distx <= 2 and disty <= 2:
-                return -10000
+                if distx <= 2 and disty <= 1:
+                    score -= 100000
+                score -= 10000
             score -= self.sensitivity / (distx+disty)**2
         return score
 
