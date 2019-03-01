@@ -14,6 +14,12 @@ max_depth = 2  # number of depth for expectimax search
 
 class TestCharacter(CharacterEntity):
 
+    def __init__(self, name, avatar, x, y, sensitivity):
+        CharacterEntity.__init__(self, name, avatar, x, y)
+        # sensitivity is a number that weight the distance to monster evaluation
+        # higher value means stay further away from nearest monster (usually 100~1000)
+        self.sensitivity = sensitivity
+
     def do(self, wrld):
         # Your code here
         # 1. go through the map and find current condition
@@ -455,9 +461,7 @@ class TestCharacter(CharacterEntity):
             disty = abs(c.y - m.y)
             if distx <= 2 and disty <= 2:
                 return -10000
-            # higher -> stay more distance away (usually: 100~1000)
-            sensitivity = 500
-            score -= sensitivity / (distx+disty)**2
+            score -= self.sensitivity / (distx+disty)**2
         return score
 
     # param: wrld, c

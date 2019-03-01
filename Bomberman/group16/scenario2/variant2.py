@@ -9,7 +9,7 @@ from game import Game
 from monsters.stupid_monster import StupidMonster
 
 # TODO This is your code!
-sys.path.insert(1, '../groupNN')
+sys.path.insert(1, '../group16')
 from testcharacter import TestCharacter
 
 # Create the game
@@ -23,8 +23,10 @@ g.add_monster(StupidMonster("stupid", # name
 # TODO Add your character
 g.add_character(TestCharacter("me", # name
                               "C",  # avatar
-                              0, 0  # position
+                              0, 0, # position
+                              100   # sensitivity
 ))
+
 
 # Run!
 g.go()

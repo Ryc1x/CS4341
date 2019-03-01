@@ -10,7 +10,7 @@ from monsters.stupid_monster import StupidMonster
 from monsters.selfpreserving_monster import SelfPreservingMonster
 
 # TODO This is your code!
-sys.path.insert(1, '../groupNN')
+sys.path.insert(1, '../group16')
 from testcharacter import TestCharacter
 
 # Create the game
@@ -29,7 +29,8 @@ g.add_monster(SelfPreservingMonster("aggressive", # name
 # TODO Add your character
 g.add_character(TestCharacter("me", # name
                               "C",  # avatar
-                              0, 0  # position
+                              0, 0, # position
+                              800   # sensitivity
 ))
 
 # Run!
