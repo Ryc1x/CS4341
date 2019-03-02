@@ -36,14 +36,15 @@ class TestCharacter(CharacterEntity):
         # if a_star_move returns none, there is no way to go closer to exit
         if a_star_move is not None:
             self.bestmove = a_star_move[0]
-        print(self.bestmove)
+        # print(self.bestmove)
 
         # Place the bomb as soon as I can
         self.place_bomb()
-        print("character at:", c_position)
+        # print("character at:", c_position)
+
         # Take the move based on expectimax
         (dx,dy) = self.expectimax_action(wrld, 0)
-        print("taking move:", dx, dy)
+        # print("taking move:", dx, dy)
         self.move(dx,dy)
 
         return
@@ -52,63 +53,63 @@ class TestCharacter(CharacterEntity):
         # FOLLOWING LINES INGNORED! #
         #############################
 
-        # Part 2
-        # finds the next position on the A star path to exit
-        state = "Default"
+        # # Part 2
+        # # finds the next position on the A star path to exit
+        # state = "Default"
 
-        # modified threaten to be bomb thread and monster thread
-        # TODO: Escape bomb when bomb thread
-        # expectimax when monster threaten
-        mthreaten = self.monster_threaten(wrld, 3)[0]
-        if mthreaten and self.bomb_threaten(wrld):
-            state = "Monster and bomb"
-        elif mthreaten:
-            state = "Monster"
-        elif self.bomb_threaten(wrld):
-            state = "Bomb"
-        elif a_star_move is None:
-            state = "Stuck"
-        else:
-            state = a_star_move[1]  # can be "has path to exit" or "no path to exit"
+        # # modified threaten to be bomb thread and monster thread
+        # # TODO: Escape bomb when bomb thread
+        # # expectimax when monster threaten
+        # mthreaten = self.monster_threaten(wrld, 3)[0]
+        # if mthreaten and self.bomb_threaten(wrld):
+        #     state = "Monster and bomb"
+        # elif mthreaten:
+        #     state = "Monster"
+        # elif self.bomb_threaten(wrld):
+        #     state = "Bomb"
+        # elif a_star_move is None:
+        #     state = "Stuck"
+        # else:
+        #     state = a_star_move[1]  # can be "has path to exit" or "no path to exit"
 
-        # Part 3
-        if state == "Stuck":
-            # we will be stuck and need bomb
-            if not self.any_explosion(wrld):
-                self.place_bomb()  # will need to escape from bomb
-        else:
-            (dx,dy) = self.expectimax_action(wrld, 0)
-            print("taking move:(", dx, dy, ")")
-            self.move(dx,dy)
-        return
-        ## ignored case for now
+        # # Part 3
+        # if state == "Stuck":
+        #     # we will be stuck and need bomb
+        #     if not self.any_explosion(wrld):
+        #         self.place_bomb()  # will need to escape from bomb
+        # else:
+        #     (dx,dy) = self.expectimax_action(wrld, 0)
+        #     print("taking move:(", dx, dy, ")")
+        #     self.move(dx,dy)
+        # return
+        # ## ignored case for now
 
-        if state == "Monster and bomb":
-            print("Monster and bomb near me!!!!!!!!!!!!")
-            self.move(0, 0)
-        elif state == "Monster":
-            print("Monster !!!!!!!!!!!!!!")
-            (dx,dy) = self.expectimax_action(wrld, 0)
-            self.move(dx,dy)
-        elif state == "Bomb":
-            print("Bomb!!!!!!!!!!!!!!!!!!!!")
-            self.move(0, 0)
-        elif state == "Stuck":
-            # we will be stuck and need bomb
-            if not self.any_explosion(wrld):
-                self.place_bomb()  # will need to escape from bomb
-        elif state == "has path to exit":
-            # move the character by one step
-            move_x = a_star_move[0][0] - c_position[0]
-            move_y = a_star_move[0][1] - c_position[1]
-            self.move(move_x, move_y)
-        elif state == "no path to exit":
-            move_x = a_star_move[0][0] - c_position[0]
-            move_y = a_star_move[0][1] - c_position[1]
-            self.move(move_x, move_y)
-        elif state == "Default":
-            print("This should not happen!!!!!")
-        pass
+        # if state == "Monster and bomb":
+        #     print("Monster and bomb near me!!!!!!!!!!!!")
+        #     self.move(0, 0)
+        # elif state == "Monster":
+        #     print("Monster !!!!!!!!!!!!!!")
+        #     (dx,dy) = self.expectimax_action(wrld, 0)
+        #     self.move(dx,dy)
+        # elif state == "Bomb":
+        #     print("Bomb!!!!!!!!!!!!!!!!!!!!")
+        #     self.move(0, 0)
+        # elif state == "Stuck":
+        #     # we will be stuck and need bomb
+        #     if not self.any_explosion(wrld):
+        #         self.place_bomb()  # will need to escape from bomb
+        # elif state == "has path to exit":
+        #     # move the character by one step
+        #     move_x = a_star_move[0][0] - c_position[0]
+        #     move_y = a_star_move[0][1] - c_position[1]
+        #     self.move(move_x, move_y)
+        # elif state == "no path to exit":
+        #     move_x = a_star_move[0][0] - c_position[0]
+        #     move_y = a_star_move[0][1] - c_position[1]
+        #     self.move(move_x, move_y)
+        # elif state == "Default":
+        #     print("This should not happen!!!!!")
+        # pass
 
     def empty_cell_neighbors(self, node, wrld):
         # List of empty cells
@@ -345,13 +346,13 @@ class TestCharacter(CharacterEntity):
                                                         sum_v += self.expectimax(new_wrld, new_events, depth + 1)
                                 dist_to_best = self.heuristic((c.x + dx_c, c.y + dy_c), self.bestmove)
                                 expect = sum_v / n - dist_to_best  # TODO: adding a weight to the dist_to_best
-                                print("action:", dx_c, dy_c)
-                                print("value:", expect)
+                                # print("action:", dx_c, dy_c)
+                                # print("value:", expect)
                                 if expect > max_v:
                                     action = (dx_c, dy_c)
                                     max_v = expect
-        print("max action:", action)
-        print("max value:", max_v)
+        # print("max action:", action)
+        # print("max value:", max_v)
         return action
 
     def expectimax(self, wrld, events, depth):
@@ -460,7 +461,7 @@ class TestCharacter(CharacterEntity):
             distx = abs(c.x - m.x)
             disty = abs(c.y - m.y)
             if distx <= 2 and disty <= 2:
-                if distx <= 2 and disty <= 1:
+                if distx <= 1 and disty <= 1:
                     score -= 100000
                 score -= 10000
             score -= self.sensitivity / (distx+disty)**2
